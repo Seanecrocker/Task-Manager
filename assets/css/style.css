@@ -1,26 +1,72 @@
 body {
   font-family: 'Open Sans', sans-serif;
   font-size: 16px;
+  background-color: #f8f9fa;
 }
 
 .swim-lanes {
   min-height: 60vh;
 }
 
+.card {
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
 .task-card {
-  margin: 0 auto;
+  margin: 0 0 1em 0;
+  padding: 0.5em;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
 .task-card:hover {
   cursor: grab;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .modal-content {
-  height: 500px;
-  width: 500px;
+  height: auto;
+  width: auto;
 }
 
-.input1 {
-  top: 100px;
-  position: relative;
+.bg-danger {
+  background-color: red !important;
+  color: white;
+}
+
+.bg-warning {
+  background-color: yellow !important;
+  color: black;
+}
+
+.card-placeholder {
+  border: 2px dashed #ccc;
+  margin: 0 0 1em 0;
+  height: 50px;
+  background-color: #f9f9f9;
+}
+
+.task-card.dragging {
+  opacity: 0.5;
+}
+
+.btn-primary, .btn-secondary, .btn-success {
+  transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.btn-primary:hover, .btn-secondary:hover, .btn-success:hover {
+  background-color: #0056b3;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-danger:hover {
+  background-color: #dc3545;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }

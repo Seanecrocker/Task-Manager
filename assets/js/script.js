@@ -1,87 +1,40 @@
-// $(document).ready(function () {
-//     $(function() {
-//         $('#calendar').datepicker();
-//     })
-// });
-
-// {const today = dayjs();
-// console.log(dayjs().format("MM/DD/YYYY"))
-// };
-
-// // Retrieve tasks and nextId from localStorage
-// let taskList = JSON.parse(localStorage.getItem("tasks"));
-// let nextId = JSON.parse(localStorage.getItem("nextId"));
-
-// // Todo: create a function to generate a unique task id
-// function generateTaskId() {
-
-// }
-
-// const btn = "primaryBtn"
-
-// // Todo: create a function to create a task card
-// function createTaskCard(task) {
-
-// }
-
-// // Todo: create a function to render the task list and make cards draggable
-// function renderTaskList() {
-
-// }
-
-// // Todo: create a function to handle adding a new task
-// function handleAddTask(event){
-
-// }
-
-// // Todo: create a function to handle deleting a task
-// function handleDeleteTask(event){
-
-// }
-
-// // Todo: create a function to handle dropping a task into a new status lane
-// function handleDrop(event, ui) {
-
-// }
-
-// // Todo: when the page loads, render the task list, add event listeners, make lanes droppable, and make the due date field a date picker
-
-// const name = "Sean"
-
-// function greet(name) {
-//     console.log("Hello, " + name + "!");
-// }
-
-// greet("Sean")
-
 $(document).ready(function() {
     // Initialize datepicker
     $('#calendar').datepicker();
 
     // Retrieve tasks and nextId from localStorage
-    let taskList = JSON.parse(localStorage.getItem("tasks"));
-    if (!taskList) {
-        taskList = [];
-    }
-
-    let nextId = JSON.parse(localStorage.getItem("nextId"));
-    if (!nextId) {
-        nextId = 1;
-    }
+    let taskList = JSON.parse(localStorage.getItem("tasks")) || [];
+    let nextId = JSON.parse(localStorage.getItem("nextId")) || 1;
 
     // Event listener for adding a task
-    $('#primaryBtn').on('click', handleAddTask);
+    $('#taskForm').on('submit', handleAddTask);
+
+    // Make columns sortable
+    $(".connectedSortable").sortable({
+        connectWith: ".connectedSortable",
+        cursor: "move",
+        placeholder: "card-placeholder",
+        start: function(event, ui) {
+            ui.item.addClass('dragging');
+        },
+        stop: function(event, ui) {
+            ui.item.removeClass('dragging');
+            updateTaskStatus();
+        }
+    }).disableSelection();
 
     // Function to handle adding a new task
     function handleAddTask(event) {
         event.preventDefault();
-        
-        // Get task details from the input fields
-        const taskName = $('#taskName').val();
-        const taskDescription = $('#taskDescription').val();
+        const taskName = $('#taskName').val().trim();
+        const taskDescription = $('#taskDescription').val().trim();
         const taskDueDate = $('#calendar').val();
 
-        // Create a new task object
+        if (!taskName || !taskDescription || !taskDueDate) {
+            alert("Please fill all fields");
+            return;
+        }
+
         const newTask = {
             id: nextId++,
             name: taskName,
@@ -90,34 +43,87 @@ $(document).ready(function() {
             status: 'todo'
         };
 
-        // Add new task to task list
         taskList.push(newTask);
+        saveTasksAndId();
+        appendTaskCard(newTask);
 
-        // Save tasks and next ID to local storage
-        localStorage.setItem('tasks', JSON.stringify(taskList));
-        localStorage.setItem('nextId', nextId);
+        // Clear the input fields
+        $('#taskName, #taskDescription, #calendar').val('');
+        $('#formModal').modal('hide');
+    }
 
-        // Create a new task card HTML
-        const taskCard = `
-            <div class="card task-card" data-id="${newTask.id}">
+    // Function to append task card to the correct column
+    function appendTaskCard(task) {
+        const currentDate = dayjs().format('YYYY-MM-DD');
+        const taskDueDate = dayjs(task.dueDate).format('YYYY-MM-DD');
+        let taskStatusClass = '';
+
+        if (task.status !== 'done') {
+            if (dayjs(taskDueDate).isBefore(currentDate)) {
+                taskStatusClass = 'bg-danger';
+            } else if (taskDueDate === currentDate) {
+                taskStatusClass = 'bg-warning';
+            }
+        }
+
+        const taskCard = $(`
+            <div class="task-card ${taskStatusClass}" data-id="${task.id}">
                 <div class="card-body">
-                    <h5 class="card-title">${newTask.name}</h5>
-                    <p class="card-text">${newTask.description}</p>
-                    <p class="card-text"><small class="text-muted">${newTask.dueDate}</small></p>
+                    <h5 class="card-title">${task.name}</h5>
+                    <p class="card-text">${task.description}</p>
+                    <p class="card-text"><small class="text-muted">${task.dueDate}</small></p>
                     <button class="btn btn-danger delete-btn">Delete</button>
                 </div>
             </div>
-        `;
+        `);
 
-        // Append the new task card to the "To Do" column
-        $('#todo-cards').append(taskCard);
-
-        // Clear the input fields
-        $('#taskName').val('');
-        $('#taskDescription').val('');
-        $('#calendar').val('');
-
-        // Close the modal
-        $('#formModal').modal('hide');
+        $(`#${task.status}-cards`).append(taskCard);
+        taskCard.find('.delete-btn').on('click', handleDeleteTask);
+        $(".connectedSortable").sortable('refresh');
     }
+
+    // Function to handle deleting a task
+    function handleDeleteTask() {
+        const taskId = $(this).closest('.task-card').data('id');
+        taskList = taskList.filter(task => task.id !== taskId);
+        saveTasksAndId();
+        $(this).closest('.task-card').remove();
+    }
+
+    // Function to update task status when moved
+    function updateTaskStatus() {
+        $('.lane').each(function() {
+            const status = $(this).find('.connectedSortable').attr('id').split('-')[0];
+            $(this).find('.task-card').each(function() {
+                const taskId = $(this).data('id');
+                const task = taskList.find(t => t.id === taskId);
+                if (task) {
+                    task.status = status;
+
+                    // Remove color classes and add appropriate class based on status
+                    $(this).removeClass('bg-danger bg-warning');
+                    if (status !== 'done') {
+                        const currentDate = dayjs().format('YYYY-MM-DD');
+                        const taskDueDate = dayjs(task.dueDate).format('YYYY-MM-DD');
+                        if (dayjs(taskDueDate).isBefore(currentDate)) {
+                            $(this).addClass('bg-danger');
+                        } else if (taskDueDate === currentDate) {
+                            $(this).addClass('bg-warning');
+                        }
+                    }
+                }
+            });
+        });
+
+        saveTasksAndId();
+    }
+
+    // Function to save tasks and nextId to localStorage
+    function saveTasksAndId() {
+        localStorage.setItem('tasks', JSON.stringify(taskList));
+        localStorage.setItem('nextId', nextId);
+    }
+
+    // Load existing tasks
+    taskList.forEach(appendTaskCard);
 });
